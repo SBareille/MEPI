@@ -1,0 +1,320 @@
+---
+title: Projet MEPI - Quel est l’impact de la transmission indirecte (via l’environnement)
+  sur la dynamique épidémique en France ?
+author: "Maelys Boennec"
+date: "Le 18 décembre 2020"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r include = FALSE}
+# setwd("C:/Users/maely/OneDrive/Documents/ACO/M2/MEPI - Modélisation en épidémiologie/Projet") # set working directory
+setwd("C:/Users/serva/Google Drive/1-Partage Ordis/M2/MEPI/Projet")
+
+library(deSolve) # import de la fonction ode
+
+rm(list=ls());  # Efface les variables créées lors des exécutions précédentes
+graphics.off(); # Ferme les fenêtres ouvertes lors des exécutions précédentes
+```
+
+## Préambule
+
+Le contenu de ce rapport a été réalisé par des étudiants en master 2 de modélisation, il n'est en aucun cas officiel. De plus, nos calculs sont souvent réalisés avec des hypothèses volontairement très simplificatrices. 
+
+ En matière de santé publique et pour toute question, nous recommandons de consulter et suivre les instructions officielles disponibles sur https://www.gouvernement.fr/info-coronavirus.
+
+
+## Contexte
+
+Depuis décembre 2019 l’épidémie de COVID-19 se propage. Elle a officiellement été déclarée comme pandémie mondiale le 11 mars 2020 par l’Organisation Mondiale de la Santé (OMS).
+La maladie se transmet :
+
+-	par projection de gouttelettes contaminées par une personne porteuse 
+
+-	par contact direct physique entre une personne porteuse et une personne saine
+
+-	par contact indirect, via des objets ou surfaces contaminées par une personne porteuse
+
+-	par l’air, essentiellement dans un espace confiné
+
+L’objectif de ce rapport est de déterminer l’impact de la **transmission indirecte** dans la dynamique épidémique de la Covid-19 en France.
+Pour cela, nous allons utiliser un modèle mathématique déterministe décrit ci-dessous. Ce modèle est plus détaillé que le modèle classique (SIR) mais il reste très simple quant à sa structure. En effet, tous les individus sont supposés réagir en moyenne de la même manière à l’infection (il n’y a pas de différences d’âge, de sexe). De plus, la structuration spatiale n’est pas prise en compte dans le modèle. 
+
+Nous présentons le modèle et ses hypothèses. Puis nous calculons l’expression du nombre de reproduction de base ($ℛ_{0}$) en fonction des paramètres du modèle. Ce $ℛ_{0}$ sera discriminé en deux termes, ce qui nous permettra d’approximer l’importance de la transmission par l’environnement. Nous réaliserons ensuite une analyse de sensibilité afin d’évaluer l’impact des paramètres d’entrée sur les sorties de notre modèle. 
+
+
+## Modèle utilisé
+
+Les personnes sensibles (notées S) qui sont infectées passent par un stade où elles sont infectées mais non infectieuses et asymptomatiques (noté E pour exposées). Ensuite, elles deviennent infectieuses tout en demeurant asymptomatiques (noté IA). Ce stade semble particulièrement important dans la propagation du COVID-19. On considère ici qu’une fraction p ne développe jamais de symptômes et qu’une fraction (1-p) passe par un stade où les personnes sont infectieuses et symptomatiques (noté IS). Enfin, l’infection finit et les personnes sont alors immunisées ou mortes (noté R pour retirées). On considère également le compartiment W représentant l’environnement. Cette dynamique peut être représentée à l’aide du diagramme de flux suivant:
+
+```{r pressure, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("SEIRW.png") # affichage du modele
+```
+
+
+Le système d’EDO associé à ce diagramme est :
+
+\begin{eqnarray*} 
+\frac{dS}{dt} & = & \mu (N-S) - (\frac{\beta_{A}I_{A} + \beta_{S}I_{S}}{N} + \beta_{W}W)S
+\end{eqnarray*}
+
+\begin{eqnarray*} 
+\frac{dE}{dt} & = & (\frac{\beta_{A}I_{A} + \beta_{S}I_{S}}{N} + \beta_{W}W)S - (\epsilon + \mu)E
+\end{eqnarray*}
+
+\begin{eqnarray*} 
+\frac{dI_{A}}{dt} & = & \epsilon E - (\omega+\mu)I_{A}
+\end{eqnarray*}
+
+\begin{eqnarray*} 
+\frac{dI_{S}}{dt} & = & (1-p)\omega I_{A} - (\nu+\mu_{s})I_{S}
+\end{eqnarray*}
+
+\begin{eqnarray*} 
+\frac{dR}{dt} & = & p \omega I_{A} + \nu I_{S} - \mu R
+\end{eqnarray*}
+
+\begin{eqnarray*} 
+\frac{dW}{dt} & = & (\frac {\sigma_{A} I_{A} + \sigma_{S} I_{S}}{N}) (1 - W) - kW
+\end{eqnarray*}
+
+
+
+Afin de simuler des épidémies, il faut connaître le taux de mortalité et de natalité liés à la dynamique démographique (supposés égaux ici, noté $\mu$), le taux de mortalité des personnes infectées lié à l’épidémie et à la dynamique démographique ($\mu_{S}$ ), le taux auquel les personnes symptomatiques cessent d’être infectieuses ($\nu$), la durée prévue dans l’état asymptomatique (1/$\omega$), la fraction infectieuse asymptomatique qui ne développe pas de symptômes ($p$), le taux de décomposition viral de l’environnement ($k$).
+Ces paramètres seront fixés (biblio ? Juste paramètres estimés dans l’article ? ).
+
+
+On cherche à estimer les paramètres suivants:
+
+- $\beta_{A}$ (resp. $\beta_{S}$) : (taux de contact entre personnes) x (probabilité de transmission par une personne asymptomatique (resp. symptomatique))
+
+- $\beta_{W}$ : (taux de contact personne/environnement) x (probabilité de transmission de l'environnement aux personnes)
+
+- $\epsilon$ : 1 / Nombre moyen de jours avant l'infection
+
+- $\sigma_{A}$ (resp. $\sigma_{S}$) : (taux de contact de la personne/environnement) x (probabilité de transmission d'une personne asymptomatique (resp. symptomatique) vers l'environnement)
+
+
+## Calcul du $ℛ_{0}$ 
+
+Une des forces du concept de $ℛ_{0}$  est qu’il peut être calculé à partir du moment où l’on connaît le cycle de vie de l’agent infectieux. Pour notre modèle SEIR-W, on peut ainsi montrer (Ogbunugafor et al., 2020) que le $ℛ_{0}$  peut être exprimé selon deux termes $R_{e}$ et $R_{p}$ : 
+
+$ℛ_{0}$  = $\frac{R_{p} + \sqrt{R_{p}² + 4R_{e}²}}{2}$
+
+$R_{p}$ représente une infection secondaire due à un contact personne/personne et $R_{e}$ une infection secondaire du à un contact environnement/personne.
+On peut exprimer ces coefficient comme suit :
+
+
+$R_{p}$  = $\frac{\epsilon[\beta_{A}(\mu_{S}+\nu)] + \beta_{S} (1-p) \omega}{(\mu+\epsilon)(\mu + \omega)(\mu_{S}+\nu)}$
+
+$R_{e}²$  = $\frac{\epsilon \beta_{W}[\sigma_{A}(\mu_{S}+\nu) + \sigma_{S}(1-p)\omega]}{k(\mu+\epsilon)(\mu + \omega)(\mu_{S}+\nu)}$
+
+
+Le $R_{e}$ est donc la composante associée avec l’infection de l’environnement. Le $R_{e}$² représente ainsi le nombre de personnes qui ont été infectées via une surface elle-même contaminée par une personne infectieuse. Le $R_{p}$ correspond au nombre de personnes infectées via un contact direct. Ainsi, le rapport $\frac{R_{e}²}{R_{e}²+R_{p}}$ présente une approximation de l’importance de la transmission par contact indirect. C’est cette fraction que l’on va chercher à étudier ici.
+
+
+## Traitement des donnees
+
+Les données sont disponibles sur le site suivant :
+
+https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/
+
+On utilise les données des admissions par jour et par département ainsi que les données concernant le nombre d'individus hospitalisés. 
+
+Visualisation des données à partir du 19 mars :
+
+```{r include = FALSE}
+dataH = read.table("donnees covid.csv", header=TRUE, sep=";")# Nombre d'individus hospitalisés (H) - à partir du 19 mars
+dataA = read.table("donnees-nouveaux-covid.csv", header=TRUE, sep=";")# Nombre d'admissions (A) à l'hôpital par jour
+
+# Nous ne distinguerons pas les hommes et les femmes
+Z=which(dataH[,2]==0);dataH=dataH[Z,]
+
+dataHH=dataH[,c(1,4)] # Département et nombre de personnes hospitalisées
+dataAA=dataA[,c(1,3)] # Département et nombre d'admissions par jour
+
+n=95 # Nombre de département en France métropolitaine 
+v=c(1:19,21:95) # Vecteur des départements Corse exclue
+
+ZH=which(as.integer(as.character(dataH[,1]))==1)
+LH=length(dataH[ZH,2]) #longueur de la série H 
+ZA=which(as.integer(as.character(dataA[,1]))==1)
+LA=length(dataA[ZA,2]) #longueur de la série A
+
+HH=matrix(0,n,LH) # Matrice des hospitalisés
+AA=matrix(0,n,LA) # Matrice des admissions
+
+for (i in v){ #on parcours tous les departements
+  ZH=which(as.integer(as.character(dataHH[,1]))==i)
+  HH[i,]=dataHH[ZH,2]
+  ZA=which(as.integer(as.character(dataAA[,1]))==i)
+  AA[i,]=dataAA[ZA,2]
+}
+
+H=matrix(0,1,LH)
+for (i in 1:LH) H[i]=sum(HH[,i]) # Hospitalisés
+A=matrix(0,1,LA)
+for (i in 1:LA) A[i]=sum(AA[,i]) # Admissions
+```
+
+```{r}
+plot(1:LH,H,xlab="Temps écoulé depuis le 19 mars (en jours)",
+     ylab="Nombre de personnes hospitalisées",col="blue")
+
+plot(1:LA,A,xlab="Temps écoulé depuis le 19 mars (en jours)",
+     ylab="Nombre d'admissions à l'hôpital (par jour)",col="red")
+```
+
+```{r include = FALSE}
+T0=53 # Décalage du point de départ 53 jours après le 19 mars (le 11 mai) 
+Tf=36 # Décalage du point de fin 36 jours avant le 05 décembre (le 30 octobre)
+H=H[T0:length(H)-Tf];A=A[T0:length(A)-Tf] # Troncations des données
+LH=length(H);LA=length(A) # Mise à jour des longueurs des séries temporelles
+```
+
+On s'intéresse aux données entre les deux confinements, donc du 11 mai au 30 octobre. Il s'agit de la période où la transmission indirecte a nécessairement été la plus forte. 
+
+```{r}
+plot(1:LH,H,xlab="Temps écoulé depuis le 1er avril (en jours)",
+     ylab="Nombre de personnes hospitalisées",col="blue")
+plot(1:LA,A,xlab="Temps écoulé depuis le 1er avril (en jours)",
+     ylab="Nombre d'admissions à l'hôpital (par jour)",col="red")
+```
+
+## Simulations et ajustement du modèle aux données
+
+Paramètres fixés :
+```{r}
+# Paramètres fixes
+# Chiffres issus de l'article d'Obgunafkjsqid machin truc sauf si précisé
+
+N=64e6  # Population hexagonale approximative
+nu = 0.03053968253968254  # = (1 - 0.038)/(4.5 * 7): 3 à 6 semaines de guérison dont 3,8% de deces
+mu = 1/(82.65 * 365)       # 82.65 : espérance de vie moyenne en France (chiffres insee 2019)
+muI = mu + 0.038/(3.5*7)  # taux de décès 3.8%, 3-4 semaines entre apparition des symptomes et décès
+k = 0.6486486486486486    # = 1/(temps moyen de survie)
+p = 0.956                 # = fraction de la population qui ne développe pas de symptômes
+```
+
+
+Paramètres à estimer :
+```{r}
+# Paramètres à estimer
+# Initialisés selon les valeurs dans l'article d'Obnugaldidkd
+bA = 0.550
+bI = 0.491
+bW = 0.031
+epsilon = 1/2.478
+sA = 3.404
+sI = 13.492
+P0 = c(bA,bI,bW,epsilon,sA,sI)
+```
+
+
+Définissons ensuite les variables du modèle et les conditions initiales :
+```{r}
+# Conditions initiales
+# Valeurs de l'article
+E0 = 5*13.3
+A0 = 13.3
+I0 = 13.3
+R0 = 0
+S0 = N - E0 - A0 - I0 - R0
+W0 = 0.01
+X0 = c(S0, E0, A0, I0, R0, W0)
+```
+
+Nous aurons besoin d'un vecteur contenant les dates sur lesquelles comparer modèle et données :
+```{r}
+#Vecteur temps 
+t = 0:(LA-1)
+```
+
+Définissons la fonction SEIRW qui prend en arguments 3 vecteurs : temps, variables d'états, et paramètres :
+```{r}
+# Modèle
+SEIRW <- function(t, X, P){ 
+    bA = P[1]
+    bI = P[2]
+    bW = P[3]
+    epsilon = P[4]
+    sA = P[5]
+    sI = P[6]
+    
+    S = X[1]
+    E = X[2]
+    A = X[3]
+    I = X[4]
+    R = X[5]
+    W = X[6]
+    
+    L = (bA * A + bI * I)/N + bW * W
+    
+    omega = 1/(5.5 - epsilon) # 5.5 = eta = période d'incubation
+    
+    dS = mu * (N - S) - L * S
+    dE = L * S - (1/epsilon + mu) * E
+    dA = (1/epsilon) * E - (omega + mu) * A
+    dI = (1 - p) * omega * A - (nu + muI) * I
+    dR = p * omega * A + nu * I - mu * R
+    dW = (sA * A + sI * I) * (1 - W)/N - k * W
+    
+    dX = c(dS, dE, dA, dI, dR, dW) # Renvoie dX/dt tel que demandé par la fonction ode
+    return (list(dX))
+}
+```
+
+Nous sommes intéressés par identifier les paramètres $\beta_{A}$, $\beta_{S}$, $\beta_{W}$, $\epsilon$, $\sigma_{A}$, $\sigma_{S}$ et l'état initial du système qui sont les plus vraisemblables d'après les données. Pour pouvoir calculer cette probabilité, il faut modéliser le processus d'observation de façon stochastique (avec variables aléatoires).
+On émettra l'hypothèse très simplificatrice selon laquelle **le nombre d'infectés symptomatiques est égal aux nombre d'admissions.** 
+
+## Maximisation de la vraisemblance
+
+```{r}
+# theta : vecteur contenant les paramètres à estimer et les conditions initiales
+logLike=function(theta){
+    P0 = theta[1:6]         # Les paramètres beta, alpha, et gamma
+    X0 = theta[7:12]        # Mise à jour des conditions initiales 
+    
+    X = ode(X0,t,SEIRW,P0)  # Résolution du système d'EDO (modèle SEIRW)
+    
+    a = X[,4]               # Admissions théoriques : I(t)
+    
+    LLA=dpois(A,a,log=T)    # Probabilité d'observer A (Poisson)
+    return(sum(LLA))        # Renvoie la log-vraisemblance (likelihood)
+}
+
+theta0 = c(P0,X0)          # Concatène paramètres et conditions initiales
+
+# opt = optim(theta0,logLike,control=list(fnscale=-1)) # Maximise logLike 
+```
+
+## Résultats
+
+```{r}
+# # Les paramètres optimaux
+# bA = opt$par[1]
+# bI = opt$par[2]
+# bW = opt$par[3]
+# epsilon = opt$par[4]
+# sA = opt$par[5]
+# sI = opt$par[6]
+# 
+# # Les conditions initiales optimales
+# S0 = opt$par[7]
+# E0 = opt$par[8]
+# A0 = opt$par[9]
+# I0 = opt$par[10]
+# R0 = opt$par[11]
+# W0 = opt$par[12]
+# 
+# X0 = c(S0,E0,A0,I0,R0,W0)          # Vecteur des conditions initiales
+# P0 = c(bA,bI,bW,epsilon,sA,sI)     # Vecteur des paramètres mis à jour
+```
+
+## Calcul des quantités d'intérêt
+```{r}
+# Rp = (epsilon * (bA* (muI + nu) + bI* (1-p)*omega))/((mu+epsilon)(mu+omega)(muI+nu))
+# Re2 = (epsilon*bW*(sA*(muI+nu)+sI*(1-p)*omega))/(k*(mu+epsilon)(mu+omega)(muI+nu)) 
+# R_0 = (Rp + sqrt(Rp**2+4*Re2))/2
+```
