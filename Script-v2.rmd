@@ -28,25 +28,32 @@ Le contenu de ce rapport a été réalisé par des étudiants en master 2 de mod
 ## Contexte
 
 Depuis décembre 2019 l’épidémie de COVID-19 se propage. Elle a officiellement été déclarée comme pandémie mondiale le 11 mars 2020 par l’Organisation Mondiale de la Santé (OMS).
-La maladie se transmet :
+Le virus Sars-CoV-2 responsable de la maladie se transmet à une personne saine :
 
--	par projection de gouttelettes contaminées par une personne porteuse 
+-	**directement** par proximité avec une personne contaminée et infectieuse (qui excrète le virus).  
+Cette transmission a lieu par *inhalation immédiate* de gouttelettes respiratoires contaminées (lors d'une conversation, d'une accolade,...) ou par *inhalation a posteriori* lorsque la personne saine porte ses mains à sa bouche ou son nez (à la suite d'une poignée de mains par exemple).  
 
--	par contact direct physique entre une personne porteuse et une personne saine
+- **indirectement** par le partage d'espaces et d'objets communs. Cette transmission ne nécéssite pas d'avoir croisé un individu infectieux.  
+La transmission peut se faire en portant ses mains à sa bouche ou son nez suite à la manipulation d'objets ou de *surfaces contaminés* (poignées de porte, rampes d'escaliers,...). En effet, le virus peut survivre dans l'environnement et la vitesse,  taux de décomposition virale, dépend de la surface considérée.  
+L'inhalation de microgoutelettes en suspension dans l'*air*, surtout dans les endroits clos et mal ventilés, est aussi possible.   
 
--	par contact indirect, via des objets ou surfaces contaminées par une personne porteuse
-
--	par l’air, essentiellement dans un espace confiné
+>ajouter de la biblio sur tout cela ? en vrai c'est trouvable sur le site de l'Inserm ou autres...
+>est-ce qu'on parle dès le contexte des gestes barrières et desinfections des locaux ? pour l'interet de quantifier la transmission indirecte
 
 L’objectif de ce rapport est de déterminer l’impact de la **transmission indirecte** dans la dynamique épidémique de la Covid-19 en France.
-Pour cela, nous allons utiliser un modèle mathématique déterministe décrit ci-dessous. Ce modèle est plus détaillé que le modèle classique (SIR) mais il reste très simple quant à sa structure. En effet, tous les individus sont supposés réagir en moyenne de la même manière à l’infection (il n’y a pas de différences d’âge, de sexe). De plus, la structuration spatiale n’est pas prise en compte dans le modèle. 
+Pour cela, nous allons utiliser un modèle mécaniste. Ce modèle est plus détaillé que le modèle classique (SIR) mais il reste très simple quant à sa structure. En effet, tous les individus sont supposés réagir en moyenne de la même manière à l’infection (il n’y a pas de différences d’âge, de sexe). De plus, la structuration spatiale n’est pas prise en compte dans le modèle.  
+Il n'y a pas d'aléatoire dans notre modèle : chaque simulation avec les mêmes paramètres aboutiera aux mêmes résultats. Il s'agit donc d'un modèle déterministe.
 
-Nous présentons le modèle et ses hypothèses. Puis nous calculons l’expression du nombre de reproduction de base ($ℛ_{0}$) en fonction des paramètres du modèle. Ce $ℛ_{0}$ sera discriminé en deux termes, ce qui nous permettra d’approximer l’importance de la transmission par l’environnement. Nous réaliserons ensuite une analyse de sensibilité afin d’évaluer l’impact des paramètres d’entrée sur les sorties de notre modèle. 
+Nous présentons le modèle et ses hypothèses. Puis nous calculons l’expression du nombre de reproduction de base ($ℛ_{0}$) en fonction des paramètres du modèle. Ce $ℛ_{0}$ sera discriminé en deux termes, ce qui nous permettra d’approximer l’importance de la transmission par l’environnement. 
+Les paramètres d'interet seront alors détérminés à partir des données de dépistages du coronavirus en France entre les deux confinements (11 mai au 30 novembre).
+Nous réaliserons ensuite une analyse de sensibilité afin d’évaluer l’impact des paramètres d’entrée sur les sorties de notre modèle. 
 
 
 ## Modèle utilisé
 
-Les personnes sensibles (notées S) qui sont infectées passent par un stade où elles sont infectées mais non infectieuses et asymptomatiques (noté E pour exposées). Ensuite, elles deviennent infectieuses tout en demeurant asymptomatiques (noté IA). Ce stade semble particulièrement important dans la propagation du COVID-19. On considère ici qu’une fraction p ne développe jamais de symptômes et qu’une fraction (1-p) passe par un stade où les personnes sont infectieuses et symptomatiques (noté IS). Enfin, l’infection finit et les personnes sont alors immunisées ou mortes (noté R pour retirées). On considère également le compartiment W représentant l’environnement. Cette dynamique peut être représentée à l’aide du diagramme de flux suivant:
+Les personnes sensibles (notées **S**) qui sont infectées passent par un stade où elles sont infectées mais non infectieuses et asymptomatiques (notées **E** pour exposées). Ensuite, elles deviennent infectieuses tout en demeurant asymptomatiques (notées **IA**). Ce stade semble particulièrement important dans la propagation du COVID-19. On considère ici qu’une fraction p ne développe jamais de symptômes et qu’une fraction (1-p) passe par un stade où les personnes sont infectieuses et symptomatiques (notées **IS**). Enfin, l’infection finit et les personnes sont alors immunisées ou mortes (notées **R** pour retirées). On considère également le compartiment **W** représentant le réservoir environnemental. Celui-ci correspond aux surfaces et air contaminés dans des lieux communs et partagés entre individus (magasins, bureaux, écoles, transports,..).  
+Ce modèle est largement inspiré de l'article de [Ogbunugafor *et al.* (2020)](https://www.medrxiv.org/content/10.1101/2020.05.04.20090092v5.article-info).  
+Cette dynamique peut être représentée à l’aide du diagramme de flux suivant:
 
 ```{r pressure, echo=FALSE, out.width = '100%'}
 knitr::include_graphics("SEIRW.png") # affichage du modele
@@ -79,10 +86,11 @@ Le système d’EDO associé à ce diagramme est :
 \frac{dW}{dt} & = & (\frac {\sigma_{A} I_{A} + \sigma_{S} I_{S}}{N}) (1 - W) - kW
 \end{eqnarray*}
 
+Explicitons d'abord les paramètres connus (les valeurs sont données plus loin avec les références bibliographiques):  
 
+- les paramètres liés à la dynamique démographique : le taux de mortalité basale (hors coronavirus) $\mu$ qui est aussi considéré égal au taux de naissance. En effet, même si en réalité la natalité est plus élevée que la mortalité en France (9,2/1000 contre 11.2/1000 selon l'INSEE 2019), notre durée d'étude est faible (6 mois) et le rôle des nouveaux nés est relativement négligeable dans la dynamique de l'épidémie. Très peu de cas de transmission verticale de la maladie ou de l'immunité aillant été observés, on considère que tous les nouveaux individus naissent sains et sensibles. 
 
-Afin de simuler des épidémies, il faut connaître le taux de mortalité et de natalité liés à la dynamique démographique (supposés égaux ici, noté $\mu$), le taux de mortalité des personnes infectées lié à l’épidémie et à la dynamique démographique ($\mu_{S}$ ), le taux auquel les personnes symptomatiques cessent d’être infectieuses ($\nu$), la durée prévue dans l’état asymptomatique (1/$\omega$), la fraction infectieuse asymptomatique qui ne développe pas de symptômes ($p$), le taux de décomposition viral de l’environnement ($k$).
-Ces paramètres seront fixés (biblio ? Juste paramètres estimés dans l’article ? ).
+- les paramètres liés aux caractéristiques de l'épidémie : le taux auquel les personnes symptomatiques cessent d’être infectieuses ($\nu$), la durée prévue dans l’état asymptomatique (1/$\omega$), la fraction infectieuse asymptomatique qui ne développe pas de symptômes ($p$), le taux de décomposition viral de l’environnement ($k$). Une mortalité aditionnelle causée par les symptomes de la maladie est comprise dans le terme $\mu_{S}$.
 
 
 On cherche à estimer les paramètres suivants:
@@ -121,6 +129,7 @@ Les données sont disponibles sur le site suivant :
 https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/
 
 On utilise les données des admissions par jour et par département ainsi que les données concernant le nombre d'individus hospitalisés. 
+>PARLER DES DATES CHOISIES. DU FAIT QU IL Y AIT DISTANTIATION SOCIALE MASQUE ET LAVAGE DE MAINS      ET FLUCTUATION DANS LE NB DE TESTS REALISES
 
 Visualisation des données à partir du 19 mars :
 
@@ -189,10 +198,11 @@ Paramètres fixés :
 # Paramètres fixes
 # Chiffres issus de l'article d'Obgunafkjsqid machin truc sauf si précisé
 
-N=64e6  # Population hexagonale approximative
-nu = 0.03053968253968254  # = (1 - 0.038)/(4.5 * 7): 3 à 6 semaines de guérison dont 3,8% de deces
-mu = 1/(82.65 * 365)       # 82.65 : espérance de vie moyenne en France (chiffres insee 2019)
+N=67e6  # Population hexagonale approximative (chiffres insee 2019)
+mu = 9.1/1000       # chiffres insee 2019. Pour rappel le taux de natalité est lui de 11.2/1000
 muI = mu + 0.038/(3.5*7)  # taux de décès 3.8%, 3-4 semaines entre apparition des symptomes et décès
+nu = 0.03053968253968254  # = (1 - 0.038)/(4.5 * 7): 3 à 6 semaines de guérison dont 3,8% de deces
+
 k = 0.6486486486486486    # = 1/(temps moyen de survie)
 p = 0.956                 # = fraction de la population qui ne développe pas de symptômes
 ```
@@ -251,7 +261,7 @@ SEIRW <- function(t, X, P){
     
     L = (bA * A + bI * I)/N + bW * W
     
-    omega = 1/(5.5 - epsilon) # 5.5 = eta = période d'incubation
+    omega = 1/(5.5 - epsilon) # 5.5 = période d'incubation
     
     dS = mu * (N - S) - L * S
     dE = L * S - (1/epsilon + mu) * E
