@@ -22,7 +22,7 @@ graphics.off(); # Ferme les fenêtres ouvertes lors des exécutions précédente
 
 Le contenu de ce rapport a été réalisé par des étudiants en master 2 de modélisation, il n'est en aucun cas officiel. De plus, nos calculs sont souvent réalisés avec des hypothèses volontairement très simplificatrices. 
 
- En matière de santé publique et pour toute question, nous recommandons de consulter et suivre les instructions officielles disponibles sur https://www.gouvernement.fr/info-coronavirus.
+En matière de santé publique et pour toute question, nous recommandons de consulter et suivre les instructions officielles disponibles sur https://www.gouvernement.fr/info-coronavirus.
 
 
 ## Contexte
@@ -131,64 +131,44 @@ https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie
 On utilise les données des admissions par jour et par département ainsi que les données concernant le nombre d'individus hospitalisés. 
 >PARLER DES DATES CHOISIES. DU FAIT QU IL Y AIT DISTANTIATION SOCIALE MASQUE ET LAVAGE DE MAINS      ET FLUCTUATION DANS LE NB DE TESTS REALISES
 
-Visualisation des données à partir du 19 mars :
+Visualisation des données à partir du 13 mai :
 
 ```{r include = FALSE}
-dataH = read.table("donnees covid.csv", header=TRUE, sep=";")# Nombre d'individus hospitalisés (H) - à partir du 19 mars
-dataA = read.table("donnees-nouveaux-covid.csv", header=TRUE, sep=";")# Nombre d'admissions (A) à l'hôpital par jour
+data = read.table("sp-pos-quot-fra-2020-12-06-19h15.csv", header=TRUE, sep=";") #donnees tests
+dataT = as.data.frame(setNames(replicate(9,numeric(0), simplify = F),c("fra","jour","P_f","P_h","P","T_f","T_h","T","cl_age90") )) #on créé un dataframe vide avec les memes noms de colonnes
 
-# Nous ne distinguerons pas les hommes et les femmes
-Z=which(dataH[,2]==0);dataH=dataH[Z,]
 
-dataHH=dataH[,c(1,4)] # Département et nombre de personnes hospitalisées
-dataAA=dataA[,c(1,3)] # Département et nombre d'admissions par jour
-
-n=95 # Nombre de département en France métropolitaine 
-v=c(1:19,21:95) # Vecteur des départements Corse exclue
-
-ZH=which(as.integer(as.character(dataH[,1]))==1)
-LH=length(dataH[ZH,2]) #longueur de la série H 
-ZA=which(as.integer(as.character(dataA[,1]))==1)
-LA=length(dataA[ZA,2]) #longueur de la série A
-
-HH=matrix(0,n,LH) # Matrice des hospitalisés
-AA=matrix(0,n,LA) # Matrice des admissions
-
-for (i in v){ #on parcours tous les departements
-  ZH=which(as.integer(as.character(dataHH[,1]))==i)
-  HH[i,]=dataHH[ZH,2]
-  ZA=which(as.integer(as.character(dataAA[,1]))==i)
-  AA[i,]=dataAA[ZA,2]
+n=length(data$jour)
+for (i in 1:n){
+  if (i%%11 == 0){
+    dataT <- rbind(dataT,data[i,]) # on récupère toutes les lignes multiples de 11 = somme pour chaque jour
+  }
 }
 
-H=matrix(0,1,LH)
-for (i in 1:LH) H[i]=sum(HH[,i]) # Hospitalisés
-A=matrix(0,1,LA)
-for (i in 1:LA) A[i]=sum(AA[,i]) # Admissions
-```
+LT=length(dataT[,1]) #longueur de la série = 205 = nombre de jour entre le 13 mai et le 3 décembre
 
-```{r}
-plot(1:LH,H,xlab="Temps écoulé depuis le 19 mars (en jours)",
-     ylab="Nombre de personnes hospitalisées",col="blue")
+plot(1:LT,dataT$T,xlab="Temps écoulé depuis le 13 mai (en jours)",
+     ylab="Nombre de personnes testées par jour",col="blue")
 
-plot(1:LA,A,xlab="Temps écoulé depuis le 19 mars (en jours)",
-     ylab="Nombre d'admissions à l'hôpital (par jour)",col="red")
+plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
+     ylab="Nombre de personne testées positivement par jour",col="red")
 ```
 
 ```{r include = FALSE}
-T0=53 # Décalage du point de départ 53 jours après le 19 mars (le 11 mai) 
-Tf=36 # Décalage du point de fin 36 jours avant le 05 décembre (le 30 octobre)
-H=H[T0:length(H)-Tf];A=A[T0:length(A)-Tf] # Troncations des données
-LH=length(H);LA=length(A) # Mise à jour des longueurs des séries temporelles
+T0=1 # Décalage du point de départ 0 jours après le 13 mai (quelle date on met ?) 
+Tf=33 # Décalage du point de fin 33 jours avant le 03 décembre (le 30 octobre)
+dataT=dataT[T0:(LT-Tf),] # Troncations des données
+LT=length(dataT[,1])  # Mise à jour des longueurs des séries temporelles
 ```
 
-On s'intéresse aux données entre les deux confinements, donc du 11 mai au 30 octobre. Il s'agit de la période où la transmission indirecte a nécessairement été la plus forte. 
+On s'intéresse aux données entre les deux confinements, donc du 11 mai au 30 octobre. Il s'agit de la période où la transmission indirecte a nécessairement été la plus forte. Cependant, les tests n'ont pas pu être réalisés à grande échelle dès le départ, c'est pourquoi on s'intéressera aux données entre le ?? mai et le 30 octobre.
 
 ```{r}
-plot(1:LH,H,xlab="Temps écoulé depuis le 1er avril (en jours)",
-     ylab="Nombre de personnes hospitalisées",col="blue")
-plot(1:LA,A,xlab="Temps écoulé depuis le 1er avril (en jours)",
-     ylab="Nombre d'admissions à l'hôpital (par jour)",col="red")
+plot(1:LT,dataT$T,xlab="Temps écoulé depuis le 13 mai (en jours)",
+     ylab="Nombre de personnes testées par jour",col="blue")
+
+plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
+     ylab="Nombre de personne testées positivement par jour",col="red")
 ```
 
 ## Simulations et ajustement du modèle aux données
@@ -238,7 +218,7 @@ X0 = c(S0, E0, A0, I0, R0, W0)
 Nous aurons besoin d'un vecteur contenant les dates sur lesquelles comparer modèle et données :
 ```{r}
 #Vecteur temps 
-t = 0:(LA-1)
+t = 0:(LT-1)
 ```
 
 Définissons la fonction SEIRW qui prend en arguments 3 vecteurs : temps, variables d'états, et paramètres :
@@ -283,21 +263,22 @@ On émettra l'hypothèse très simplificatrice selon laquelle **le nombre d'infe
 ```{r}
 # theta : vecteur contenant les paramètres à estimer et les conditions initiales
 logLike=function(theta){
-    P0 = theta[1:6]         # Les paramètres beta, alpha, et gamma
+    P0 = theta[1:6]         # Les paramètres à estimer
     X0 = theta[7:12]        # Mise à jour des conditions initiales 
     
     X = ode(X0,t,SEIRW,P0)  # Résolution du système d'EDO (modèle SEIRW)
     
-    a = X[,4]               # Admissions théoriques : I(t)
+    pos = X[,3] + X[,4]     # Tests positifs théoriques : IA(t) + IS(t)
     
-    LLA=dpois(A,a,log=T)    # Probabilité d'observer A (Poisson)
-    return(sum(LLA))        # Renvoie la log-vraisemblance (likelihood)
+    LLT=dpois(dataT$P,pos,log=T)    # Probabilité d'observer les tests positifs (Poisson)
+    return(sum(LLT))        # Renvoie la log-vraisemblance (likelihood)
 }
 
 theta0 = c(P0,X0)          # Concatène paramètres et conditions initiales
 
 # opt = optim(theta0,logLike,control=list(fnscale=-1)) # Maximise logLike 
 ```
+> ne fonctionne toujours pas...
 
 ## Résultats
 
