@@ -1,4 +1,3 @@
----
 title: Projet MEPI - Quel est l’impact de la transmission indirecte (via l’environnement)
   sur la dynamique épidémique en France ?
 author: "Maelys Boennec"
@@ -11,9 +10,7 @@ output:
 ```{r include = FALSE}
 # setwd("C:/Users/maely/OneDrive/Documents/ACO/M2/MEPI - Modélisation en épidémiologie/Projet") # set working directory
 setwd("C:/Users/serva/Google Drive/1-Partage Ordis/M2/MEPI/Projet")
-
 library(deSolve) # import de la fonction ode
-
 rm(list=ls());  # Efface les variables créées lors des exécutions précédentes
 graphics.off(); # Ferme les fenêtres ouvertes lors des exécutions précédentes
 ```
@@ -39,7 +36,6 @@ L'inhalation de microgoutelettes en suspension dans l'*air*, surtout dans les en
 
 >ajouter de la biblio sur tout cela ? en vrai c'est trouvable sur le site de l'Inserm ou autres...
 >est-ce qu'on parle dès le contexte des gestes barrières et desinfections des locaux ? pour l'interet de quantifier la transmission indirecte
-
 L’objectif de ce rapport est de déterminer l’impact de la **transmission indirecte** dans la dynamique épidémique de la Covid-19 en France.
 Pour cela, nous allons utiliser un modèle mécaniste. Ce modèle est plus détaillé que le modèle classique (SIR) mais il reste très simple quant à sa structure. En effet, tous les individus sont supposés réagir en moyenne de la même manière à l’infection (il n’y a pas de différences d’âge, de sexe). De plus, la structuration spatiale n’est pas prise en compte dans le modèle.  
 Il n'y a pas d'aléatoire dans notre modèle : chaque simulation avec les mêmes paramètres aboutiera aux mêmes résultats. Il s'agit donc d'un modèle déterministe.
@@ -130,26 +126,20 @@ https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie
 
 On utilise les données des admissions par jour et par département ainsi que les données concernant le nombre d'individus hospitalisés. 
 >PARLER DES DATES CHOISIES. DU FAIT QU IL Y AIT DISTANTIATION SOCIALE MASQUE ET LAVAGE DE MAINS      ET FLUCTUATION DANS LE NB DE TESTS REALISES
-
 Visualisation des données à partir du 13 mai :
 
 ```{r include = FALSE}
 data = read.table("sp-pos-quot-fra-2020-12-06-19h15.csv", header=TRUE, sep=";") #donnees tests
 dataT = as.data.frame(setNames(replicate(9,numeric(0), simplify = F),c("fra","jour","P_f","P_h","P","T_f","T_h","T","cl_age90") )) #on créé un dataframe vide avec les memes noms de colonnes
-
-
 n=length(data$jour)
 for (i in 1:n){
   if (i%%11 == 0){
     dataT <- rbind(dataT,data[i,]) # on récupère toutes les lignes multiples de 11 = somme pour chaque jour
   }
 }
-
 LT=length(dataT[,1]) #longueur de la série = 205 = nombre de jour entre le 13 mai et le 3 décembre
-
 plot(1:LT,dataT$T,xlab="Temps écoulé depuis le 13 mai (en jours)",
      ylab="Nombre de personnes testées par jour",col="blue")
-
 plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
      ylab="Nombre de personne testées positivement par jour",col="red")
 ```
@@ -166,7 +156,6 @@ On s'intéresse aux données entre les deux confinements, donc du 11 mai au 30 o
 ```{r}
 plot(1:LT,dataT$T,xlab="Temps écoulé depuis le 13 mai (en jours)",
      ylab="Nombre de personnes testées par jour",col="blue")
-
 plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
      ylab="Nombre de personne testées positivement par jour",col="red")
 ```
@@ -177,12 +166,10 @@ Paramètres fixés :
 ```{r}
 # Paramètres fixes
 # Chiffres issus de l'article d'Obgunafkjsqid machin truc sauf si précisé
-
 N=67e6  # Population hexagonale approximative (chiffres insee 2019)
-mu = 9.1/1000       # chiffres insee 2019. Pour rappel le taux de natalité est lui de 11.2/1000
+mu = 9.1/365000       # chiffres insee 2019. Pour rappel le taux de natalité est lui de 11.2/1000
 muI = mu + 0.038/(3.5*7)  # taux de décès 3.8%, 3-4 semaines entre apparition des symptomes et décès
 nu = 0.03053968253968254  # = (1 - 0.038)/(4.5 * 7): 3 à 6 semaines de guérison dont 3,8% de deces
-
 k = 0.6486486486486486    # = 1/(temps moyen de survie)
 p = 0.956                 # = fraction de la population qui ne développe pas de symptômes
 ```
@@ -206,12 +193,12 @@ Définissons ensuite les variables du modèle et les conditions initiales :
 ```{r}
 # Conditions initiales
 # Valeurs de l'article
-E0 = 5*13.3
-A0 = 13.3
-I0 = 13.3
-R0 = 0
+E0 = 5*500
+A0 = 500
+I0 = 500
+R0 = 106643
 S0 = N - E0 - A0 - I0 - R0
-W0 = 0.01
+W0 = 0.02
 X0 = c(S0, E0, A0, I0, R0, W0)
 ```
 
@@ -259,31 +246,28 @@ Nous sommes intéressés par identifier les paramètres $\beta_{A}$, $\beta_{S}$
 On émettra l'hypothèse très simplificatrice selon laquelle **le nombre d'infectés symptomatiques est égal aux nombre d'admissions.** 
 
 ## Maximisation de la vraisemblance
-
 ```{r}
 # theta : vecteur contenant les paramètres à estimer et les conditions initiales
+
 logLike=function(theta){
-    P0 = theta[1:6]         # Les paramètres à estimer
-    X0 = theta[7:12]        # Mise à jour des conditions initiales 
-    
-    X = ode(X0,t,SEIRW,P0)  # Résolution du système d'EDO (modèle SEIRW)
-    
-    pos = X[,3] + X[,4]     # Tests positifs théoriques : IA(t) + IS(t)
-    
-    LLT=dpois(dataT$P,pos,log=T)    # Probabilité d'observer les tests positifs (Poisson)
-    return(sum(LLT))        # Renvoie la log-vraisemblance (likelihood)
+   P0 = theta[1:6]         # Les paramètres à estimer
+   X0 = theta[7:12]        # Mise à jour des conditions initiales 
+   
+   X = ode(X0,t,SEIRW,P0)  # Résolution du système d'EDO (modèle SEIRW)
+     
+   pos = X[,3] + X[,4]     # Tests positifs théoriques : IA(t) + IS(t)
+     
+   LLT=dpois(dataT$P,pos,log=T)    # Probabilité d'observer les tests positifs (Poisson)
+   return(sum(LLT))        # Renvoie la log-vraisemblance (likelihood)
 }
-
 theta0 = c(P0,X0)          # Concatène paramètres et conditions initiales
-
 # opt = optim(theta0,logLike,control=list(fnscale=-1)) # Maximise logLike 
-```
-> ne fonctionne toujours pas...
-
-## Résultats
-
-```{r}
-# # Les paramètres optimaux
+# ```
+# > ne fonctionne toujours pas...
+# ## Résultats
+# 
+# ```{r}
+# # # Les paramètres optimaux
 # bA = opt$par[1]
 # bI = opt$par[2]
 # bW = opt$par[3]
@@ -308,4 +292,3 @@ theta0 = c(P0,X0)          # Concatène paramètres et conditions initiales
 # Rp = (epsilon * (bA* (muI + nu) + bI* (1-p)*omega))/((mu+epsilon)(mu+omega)(muI+nu))
 # Re2 = (epsilon*bW*(sA*(muI+nu)+sI*(1-p)*omega))/(k*(mu+epsilon)(mu+omega)(muI+nu)) 
 # R_0 = (Rp + sqrt(Rp**2+4*Re2))/2
-```
