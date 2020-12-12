@@ -121,12 +121,9 @@ Le $R_{e}$ est donc la composante associée avec l’infection de l’environnem
 ## Traitement des donnees
 
 Les données sont disponibles sur le site suivant :
+https://www.data.gouv.fr/fr/datasets/donnees-relatives-aux-resultats-des-tests-virologiques-covid-19/?fbclid=IwAR1WhfOE7CeHH_O34vScmUaAocAuXJSDTS9twNx5mJ2RcvPMMF-_mHwTNaA
 
-https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/
-
-On utilise les données des admissions par jour et par département ainsi que les données concernant le nombre d'individus hospitalisés. 
->PARLER DES DATES CHOISIES. DU FAIT QU IL Y AIT DISTANTIATION SOCIALE MASQUE ET LAVAGE DE MAINS      ET FLUCTUATION DANS LE NB DE TESTS REALISES
-Visualisation des données à partir du 13 mai :
+On utilise les données relatives aux résultats des tests virologiques.
 
 ```{r include = FALSE}
 data = read.table("sp-pos-quot-fra-2020-12-06-19h15.csv", header=TRUE, sep=";") #donnees tests
@@ -144,28 +141,32 @@ plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
      ylab="Nombre de personne testées positivement par jour",col="red")
 ```
 
+On s'intéresse aux données entre les deux confinements, donc du 11 mai au 30 octobre. Il s'agit de la période où la transmission indirecte a nécessairement été la plus forte. Cependant, les tests n'ont pas pu être réalisés à grande échelle dès le départ, c'est pourquoi on s'intéressera aux données entre le 25 juillet et le 30 octobre, le 25 juillet étant la date à partir de laquelle les tests ont été possibles sans ordonnance médicale (https://www.ameli.fr/assure/actualites/covid-19-les-tests-de-depistages-sont-possibles-sans-prescription-medicale).
+
 ```{r include = FALSE}
-T0=1 # Décalage du point de départ 0 jours après le 13 mai (quelle date on met ?) 
+T0=73 # Décalage du point de départ 73 jours après le 13 mai (le 25 juillet) 
 Tf=33 # Décalage du point de fin 33 jours avant le 03 décembre (le 30 octobre)
 dataT=dataT[T0:(LT-Tf),] # Troncations des données
 LT=length(dataT[,1])  # Mise à jour des longueurs des séries temporelles
 ```
 
-On s'intéresse aux données entre les deux confinements, donc du 11 mai au 30 octobre. Il s'agit de la période où la transmission indirecte a nécessairement été la plus forte. Cependant, les tests n'ont pas pu être réalisés à grande échelle dès le départ, c'est pourquoi on s'intéressera aux données entre le ?? mai et le 30 octobre.
-
 ```{r}
-plot(1:LT,dataT$T,xlab="Temps écoulé depuis le 13 mai (en jours)",
+plot(1:LT,dataT$T,xlab="Temps entre le 25 juillet et le 30 octobre (en jours)",
      ylab="Nombre de personnes testées par jour",col="blue")
 plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
      ylab="Nombre de personne testées positivement par jour",col="red")
 ```
 
+**Attention** : Nous avons pleinement conscience du biais engendré par l'utilisation de ce type de données. Tout d'abord, la proportion de personnes symptomatiques testées par rapport au nombre réel est bien plus élevée que pour les personnes asymptomatiques. Aussi, il est spécifié que "les difficultés de remontée des résultats de tests vers Santé publique France ont été progressivement résolues entre le 5 et le 7 novembre". De plus, le port du masque minimise l'impact de la transmission indirecte, de même que tous les gestes barrières mis en place. L'estimation de la part de la transmission par voie indirecte est donc loin d'être exacte avec ce modèle, mais cela peut permettre de donner un ordre d'idée. 
+
 ## Simulations et ajustement du modèle aux données
 
 Paramètres fixés :
+
+Les chiffres sont issus de l'article de  [Ogbunugafor *et al.* (2020)](https://www.medrxiv.org/content/10.1101/2020.05.04.20090092v5.article-info) sauf si le contraire est précisé.
+
 ```{r}
 # Paramètres fixes
-# Chiffres issus de l'article d'Obgunafkjsqid machin truc sauf si précisé
 N=67e6  # Population hexagonale approximative (chiffres insee 2019)
 mu = 9.1/365000       # chiffres insee 2019. Pour rappel le taux de natalité est lui de 11.2/1000
 muI = mu + 0.038/(3.5*7)  # taux de décès 3.8%, 3-4 semaines entre apparition des symptomes et décès
