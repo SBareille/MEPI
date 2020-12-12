@@ -120,11 +120,12 @@ Le $R_{e}$ est donc la composante associée avec l’infection de l’environnem
 
 ## Traitement des donnees
 
-Les données (depuis la fin du premier confinement le 13 mai) sont disponibles sur le site du gouvernement :
-
-https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/
+Les données sont disponibles sur le site suivant:
+https://www.data.gouv.fr/fr/datasets/donnees-relatives-aux-resultats-des-tests-virologiques-covid-19/?fbclid=IwAR1WhfOE7CeHH_O34vScmUaAocAuXJSDTS9twNx5mJ2RcvPMMF-_mHwTNaA
 
 On utilise le nombre de tests virologiques positifs en France par jour. Les résultats fournis sur la plateforme correspondent aux tests réalisés par l'ensemble des laboratoires de ville ainsi que les établissements hospitaliers. 
+
+
 
 ```{r include = FALSE}
 data = read.table("sp-pos-quot-fra-2020-12-06-19h15.csv", header=TRUE, sep=";") #donnees tests
@@ -158,7 +159,7 @@ Nous allons donc utiliser les données des tests positifs entre le 25 juillet et
 
 ```{r include = FALSE}
 LT=length(dataT[,1]) #longueur de la série = 205 = nombre de jour entre le 13 mai et le 3 décembre
-T0=73 # Décalage du point de départ 73 jours après le 13 mai 
+T0=73 # Décalage du point de départ 73 jours après le 13 mai (le 25 juillet)
 Tf=33 # Décalage du point de fin 33 jours avant le 03 décembre (le 30 octobre)
 dataT=dataT[T0:(LT-Tf),] # Troncations des données
 LT=length(dataT[,1])  # Mise à jour des longueurs des séries temporelles
@@ -171,12 +172,16 @@ plot(dataT[,2],dataT$P,xlab="Temps",
      ylab="Nombre de personne testées positivement par jour",col="red")
 ```
 
+**Attention** : Nous avons pleinement conscience du biais engendré par l'utilisation de ce type de données. Tout d'abord, la proportion de personnes symptomatiques testées par rapport au nombre réel est bien plus élevée que pour les personnes asymptomatiques. Aussi, il est spécifié que "les difficultés de remontée des résultats de tests vers Santé publique France ont été progressivement résolues entre le 5 et le 7 novembre". De plus, le port du masque minimise l'impact de la transmission indirecte, de même que tous les gestes barrières mis en place. L'estimation de la part de la transmission par voie indirecte est donc loin d'être exacte avec ce modèle, mais cela peut permettre de donner un ordre d'idée. 
+
+
 ## Simulations et ajustement du modèle aux données
 
 Paramètres fixés :
+
+Les chiffres sont issus de l'article de  [Ogbunugafor *et al.* (2020)](https://www.medrxiv.org/content/10.1101/2020.05.04.20090092v5.article-info) sauf si le contraire est précisé.
 ```{r}
 # Paramètres fixes
-# Chiffres issus de l'article d'Obgunafkjsqid machin truc sauf si précisé
 N=67e6  # Population hexagonale approximative (chiffres insee 2019)
 mu = 9.1/365000       # chiffres insee 2019. 9,1/1000 morts par an. Pour rappel le taux de natalité est lui de 11.2/1000. donne 2.49*10^-5
 # mu = 1/(82.52 * 365) # à partir de durée de vie. donne 3.41*10^-5   plus proche de article
@@ -189,9 +194,11 @@ p = 0.956                 # = fraction de la population qui ne développe pas de
 
 
 Paramètres à estimer :
+
+Les chiffres sont issus de l'article de  [Ogbunugafor *et al.* (2020)](https://www.medrxiv.org/content/10.1101/2020.05.04.20090092v5.article-info).
+
 ```{r}
 # Paramètres à estimer
-# Initialisés selon les valeurs dans l'article d'Obnugaldidkd
 bA = 0.550
 bI = 0.491
 bW = 0.031
