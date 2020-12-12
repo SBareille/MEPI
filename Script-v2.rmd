@@ -32,10 +32,10 @@ Cette transmission a lieu par *inhalation immédiate* de gouttelettes respiratoi
 
 - **indirectement** par le partage d'espaces et d'objets communs. Cette transmission ne nécéssite pas d'avoir croisé un individu infectieux.  
 La transmission peut se faire en portant ses mains à sa bouche ou son nez suite à la manipulation d'objets ou de *surfaces contaminés* (poignées de porte, rampes d'escaliers,...). En effet, le virus peut survivre dans l'environnement et la vitesse,  taux de décomposition virale, dépend de la surface considérée.  
-L'inhalation de microgoutelettes en suspension dans l'*air*, surtout dans les endroits clos et mal ventilés, est aussi possible.   
+L'inhalation de microgoutelettes en suspension dans l'*air*, surtout dans les endroits clos et mal ventilés, est aussi possible.  
 
 >ajouter de la biblio sur tout cela ? en vrai c'est trouvable sur le site de l'Inserm ou autres...
->est-ce qu'on parle dès le contexte des gestes barrières et desinfections des locaux ? pour l'interet de quantifier la transmission indirecte
+
 L’objectif de ce rapport est de déterminer l’impact de la **transmission indirecte** dans la dynamique épidémique de la Covid-19 en France.
 Pour cela, nous allons utiliser un modèle mécaniste. Ce modèle est plus détaillé que le modèle classique (SIR) mais il reste très simple quant à sa structure. En effet, tous les individus sont supposés réagir en moyenne de la même manière à l’infection (il n’y a pas de différences d’âge, de sexe). De plus, la structuration spatiale n’est pas prise en compte dans le modèle.  
 Il n'y a pas d'aléatoire dans notre modèle : chaque simulation avec les mêmes paramètres aboutiera aux mêmes résultats. Il s'agit donc d'un modèle déterministe.
@@ -51,7 +51,7 @@ Les personnes sensibles (notées **S**) qui sont infectées passent par un stade
 Ce modèle est largement inspiré de l'article de [Ogbunugafor *et al.* (2020)](https://www.medrxiv.org/content/10.1101/2020.05.04.20090092v5.article-info).  
 Cette dynamique peut être représentée à l’aide du diagramme de flux suivant:
 
-```{r pressure, echo=FALSE, out.width = '100%'}
+```{r, echo=FALSE, out.width = '100%'}
 knitr::include_graphics("SEIRW.png") # affichage du modele
 ```
 
@@ -120,56 +120,68 @@ Le $R_{e}$ est donc la composante associée avec l’infection de l’environnem
 
 ## Traitement des donnees
 
-Les données sont disponibles sur le site suivant :
-https://www.data.gouv.fr/fr/datasets/donnees-relatives-aux-resultats-des-tests-virologiques-covid-19/?fbclid=IwAR1WhfOE7CeHH_O34vScmUaAocAuXJSDTS9twNx5mJ2RcvPMMF-_mHwTNaA
+Les données (depuis la fin du premier confinement le 13 mai) sont disponibles sur le site du gouvernement :
 
-On utilise les données relatives aux résultats des tests virologiques.
+https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/
+
+On utilise le nombre de tests virologiques positifs en France par jour. Les résultats fournis sur la plateforme correspondent aux tests réalisés par l'ensemble des laboratoires de ville ainsi que les établissements hospitaliers. 
 
 ```{r include = FALSE}
 data = read.table("sp-pos-quot-fra-2020-12-06-19h15.csv", header=TRUE, sep=";") #donnees tests
-dataT = as.data.frame(setNames(replicate(9,numeric(0), simplify = F),c("fra","jour","P_f","P_h","P","T_f","T_h","T","cl_age90") )) #on créé un dataframe vide avec les memes noms de colonnes
+dataT = as.data.frame(setNames(replicate(9,numeric(0), simplify = F),c("fra","jour","P_f","P_h","P","T_f","T_h","T","cl_age90") )) #on crée un dataframe vide avec les memes noms de colonnes
 n=length(data$jour)
 for (i in 1:n){
   if (i%%11 == 0){
     dataT <- rbind(dataT,data[i,]) # on récupère toutes les lignes multiples de 11 = somme pour chaque jour
   }
 }
-LT=length(dataT[,1]) #longueur de la série = 205 = nombre de jour entre le 13 mai et le 3 décembre
-plot(1:LT,dataT$T,xlab="Temps écoulé depuis le 13 mai (en jours)",
+
+dataT[,2] = as.Date(dataT[,2], format = "%Y-%m-%d") #transformation sous format date pour plus de lisibilité graphique
+
+plot(dataT[,2],dataT$T,xlab="Temps",
      ylab="Nombre de personnes testées par jour",col="blue")
-plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
+plot(dataT[,2],dataT$P,xlab="Temps",
      ylab="Nombre de personne testées positivement par jour",col="red")
 ```
 
-On s'intéresse aux données entre les deux confinements, donc du 11 mai au 30 octobre. Il s'agit de la période où la transmission indirecte a nécessairement été la plus forte. Cependant, les tests n'ont pas pu être réalisés à grande échelle dès le départ, c'est pourquoi on s'intéressera aux données entre le 25 juillet et le 30 octobre, le 25 juillet étant la date à partir de laquelle les tests ont été possibles sans ordonnance médicale (https://www.ameli.fr/assure/actualites/covid-19-les-tests-de-depistages-sont-possibles-sans-prescription-medicale).
+Sur ces graphiques nous pouvons observer la dynamique de dépistage du coronavirus depuis la sortie du premier confinement le 13 mai 2020 jusqu'au 3 décembre (date de téléchargement du jeu de données). On observe une augmentation du nombre de tests effectués depuis juillet jusqu'à fin octobre (avec une baisse courant septembre). Après début novembre le nombre est en baisse dû à la mise en place du second confinement. Les deux "courbes en dessous" correspondent aux week-ends où le rythme de dépistage est plus faible.  
+Le nombre de tests positifs a lui augmenté à partir de mi-aout jusqu'à un pic début novembre. Le confinement a alors permis de limiter le nombre de nouveaux cas.  
+
+Nous allons nous servir du nombre de tests virologiques positifs pour approximer le nombre total de personnes excrétant le virus. En effet, ces tests PCR détectent le materiel génétique du virus dans les sécretions nasales, et pas simplement la présence de réaction immunitaire par l'individu testé (test antigénique sur sang). 
+La présentation du nombre total de tests positifs seul, sans informations épidémiologiques relatives à l'état des individus testés, ne permet pas de différencier les personnes asymptomatiques **E** et **IA** des personnes symptomatiques **IS**. 
+
+Ainsi, pour avoir un pourcentage de représentation relativement constante des différentes classes d'individus (et ainsi pouvoir déduire le nombre de testés positifs qui sont en réalité **E**, **IA** ou **IS**), nous avons choisi d'utiliser les données seulement à partir du moment où le test était accessible à toutes les personnes indépendemment le souhaitant. En effet, avant cette date on peut imaginer que l'on a une sureprésentation des individus symptomatiques (même si certaines personnes "cas-contacts" obtenaient dans ordonnances pour depistage). Le test a été rendu accessible sans ordonnance au 25 juillet.  
+
+De plus, il semble évident que le second confinement vécu par les français depuis début novembre a radicalement modifié la dynamique de transmission directe, mais aussi indirecte du virus. En effet, la baisse des fréquentation des lieux publiques a limité certainement limité la charge virale du milieu et la probabilité de s'infecter par ce biais. Ainsi, nous ne souhaitons pas incorporer les données postérieures au 30 octobre dans notre analyse.  
+
+Nous allons donc utiliser les données des tests positifs entre le 25 juillet et le 30 octobre 2020. 
 
 ```{r include = FALSE}
-T0=73 # Décalage du point de départ 73 jours après le 13 mai (le 25 juillet) 
+LT=length(dataT[,1]) #longueur de la série = 205 = nombre de jour entre le 13 mai et le 3 décembre
+T0=73 # Décalage du point de départ 73 jours après le 13 mai 
 Tf=33 # Décalage du point de fin 33 jours avant le 03 décembre (le 30 octobre)
 dataT=dataT[T0:(LT-Tf),] # Troncations des données
 LT=length(dataT[,1])  # Mise à jour des longueurs des séries temporelles
 ```
 
 ```{r}
-plot(1:LT,dataT$T,xlab="Temps entre le 25 juillet et le 30 octobre (en jours)",
+plot(dataT[,2],dataT$T,xlab="Temps",
      ylab="Nombre de personnes testées par jour",col="blue")
-plot(1:LT,dataT$P,xlab="Temps écoulé depuis le 13 mai (en jours)",
+plot(dataT[,2],dataT$P,xlab="Temps",
      ylab="Nombre de personne testées positivement par jour",col="red")
 ```
-
-**Attention** : Nous avons pleinement conscience du biais engendré par l'utilisation de ce type de données. Tout d'abord, la proportion de personnes symptomatiques testées par rapport au nombre réel est bien plus élevée que pour les personnes asymptomatiques. Aussi, il est spécifié que "les difficultés de remontée des résultats de tests vers Santé publique France ont été progressivement résolues entre le 5 et le 7 novembre". De plus, le port du masque minimise l'impact de la transmission indirecte, de même que tous les gestes barrières mis en place. L'estimation de la part de la transmission par voie indirecte est donc loin d'être exacte avec ce modèle, mais cela peut permettre de donner un ordre d'idée. 
 
 ## Simulations et ajustement du modèle aux données
 
 Paramètres fixés :
-
-Les chiffres sont issus de l'article de  [Ogbunugafor *et al.* (2020)](https://www.medrxiv.org/content/10.1101/2020.05.04.20090092v5.article-info) sauf si le contraire est précisé.
-
 ```{r}
 # Paramètres fixes
+# Chiffres issus de l'article d'Obgunafkjsqid machin truc sauf si précisé
 N=67e6  # Population hexagonale approximative (chiffres insee 2019)
-mu = 9.1/365000       # chiffres insee 2019. Pour rappel le taux de natalité est lui de 11.2/1000
+mu = 9.1/365000       # chiffres insee 2019. 9,1/1000 morts par an. Pour rappel le taux de natalité est lui de 11.2/1000. donne 2.49*10^-5
+# mu = 1/(82.52 * 365) # à partir de durée de vie. donne 3.41*10^-5   plus proche de article
 muI = mu + 0.038/(3.5*7)  # taux de décès 3.8%, 3-4 semaines entre apparition des symptomes et décès
+# muI = mu + 0.038/(3.5*7) # ou sinon dire qu'on a utilisé les données françaises. soit en utilisant tableau Avec morts hopitaux + epahd. soir en utilisant annonce officielle
 nu = 0.03053968253968254  # = (1 - 0.038)/(4.5 * 7): 3 à 6 semaines de guérison dont 3,8% de deces
 k = 0.6486486486486486    # = 1/(temps moyen de survie)
 p = 0.956                 # = fraction de la population qui ne développe pas de symptômes
@@ -195,9 +207,9 @@ Définissons ensuite les variables du modèle et les conditions initiales :
 # Conditions initiales
 # Valeurs de l'article
 E0 = 5*500
-A0 = 500
+A0 = 500 # utiliser le fait que 30% de 
 I0 = 500
-R0 = 106643
+R0 = 106643 # au 24 juillet.  c'est le chiffre donné par annonce gouv. mais c'est plus élevé pour OMS. et encore plus pour tableau  
 S0 = N - E0 - A0 - I0 - R0
 W0 = 0.02
 X0 = c(S0, E0, A0, I0, R0, W0)
@@ -293,3 +305,15 @@ theta0 = c(P0,X0)          # Concatène paramètres et conditions initiales
 # Rp = (epsilon * (bA* (muI + nu) + bI* (1-p)*omega))/((mu+epsilon)(mu+omega)(muI+nu))
 # Re2 = (epsilon*bW*(sA*(muI+nu)+sI*(1-p)*omega))/(k*(mu+epsilon)(mu+omega)(muI+nu)) 
 # R_0 = (Rp + sqrt(Rp**2+4*Re2))/2
+```
+
+Au cours de notre analyse nous avons démontré l'importance de la transmission indirecte du coronavirus dans la dynamique de l'épidémie. Pour simplification, nous n'avons ici pas pris en compte le type de substrat présent dans l'environnement. Cependant, les analyses de laboratoire ont démontré une variation de la durée de vie du virus en fonction du substrat [Van Doremalen N *et al.*(2020)](https://www.nejm.org/doi/full/10.1056/nejmc2004973). En effet, le virus vit plus longtemps sur une surface en plastique que sur du cuivre par exemple (72h versus 4h). Ces spécificités ont été prises en compte dans l'article de [Ogbunugafor *et al.* (2020)](https://www.medrxiv.org/content/10.1101/2020.05.04.20090092v5.article-info) si vous voulez explorer cet aspect. 
+
+Il est important de garder à l'esprit que notre analyse a été réalisée sur des données représentant la situation française entre les deux confinements. Ainsi, la transmission indirecte a été ici évaluée dans une situation où les individus sont conscients des gestes barrières relayé par santé publique france et les appliquent.(mettre étude Santé publique France - Kantar / Étude ViQuoP / Évolution des perceptions
+et pratiques des gestes barrières au coronavirus (SARS-CoV-2) / 5 juin 2020 ? )
+
+```{r pressure, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("Gestes_barrières.png") # affiche de communication
+```
+
+Ces gestes permettent à la fois de limiter la transmission directe, mais aussi indirecte (aération des pièces, lavage régulier des mains, port du masque,...). Ainsi, la transmission indirecte serait plus élevée dans une population n'aillant pas changé ses comportements.
